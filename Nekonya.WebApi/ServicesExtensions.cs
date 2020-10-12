@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using IdentityServer4.AccessTokenValidation;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
@@ -88,6 +89,61 @@ namespace Nekonya.WebApi
                     options.OperationFilter<AuthResponsesOperationFilter>();
                 }
             });
+        }
+
+        public static void AddCors(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(policy =>
+                {
+                    if (configuration.GetValue<bool>("Cors:AllowAny"))
+                    {
+                        //允许所有跨域来源
+                        policy.AllowAnyOrigin();
+                        policy.AllowAnyMethod();
+                        policy.AllowAnyHeader();
+                    }
+                    else
+                    {
+                        var cors_origins = configuration.GetSection("Cors:AllowOrigins").Get<string[]>();
+                        policy.WithOrigins(cors_origins);
+                    }
+                });
+            });
+            
+        }
+
+        public static void AddDatabase<TDbContext>(this IServiceCollection services, IConfiguration configuration) where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+        {
+            string dbProviderType = configuration["Database:ProviderType"]?.ToLower() ?? "sqlite";
+            switch (dbProviderType)
+            {
+                case "memory":
+                    services.AddDbContext<TDbContext>(options => 
+                        options.UseInMemoryDatabase("MemoryDB"));
+                    break;
+
+                case "mysql":
+                case "mariadb":
+                    services.AddDbContext<TDbContext>(options =>
+                        options.UseMySql(configuration.GetConnectionString("Default_Mysql")));
+                    break;
+
+                case "sqlite3":
+                case "sqlite":
+                    services.AddDbContext<TDbContext>(options =>
+                        options.UseSqlite(configuration.GetConnectionString("Default_Sqlite")));
+                    break;
+
+                case "sqlserver":
+                    services.AddDbContext<TDbContext>(options =>
+                        options.UseSqlServer(configuration.GetConnectionString("Default_SqlServer")));
+                    break;
+
+                default:
+                    throw new Exception("Invalid database provider type name: " + dbProviderType);
+            }
         }
 
     }

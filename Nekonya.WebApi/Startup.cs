@@ -1,15 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Nekonya.WebApi.AutoMapper;
+using Nekonya.WebApi.Data;
 
 namespace Nekonya.WebApi
 {
@@ -34,6 +30,18 @@ namespace Nekonya.WebApi
             //Swagger
             if (Configuration.GetValue<bool>("Swagger:Enable"))
                 services.AddSwagger(Configuration);
+
+            //Cors
+            if (Configuration.GetValue<bool>("Cors:Enable"))
+                services.AddCors(Configuration);
+
+            //Database
+            if (Configuration.GetValue<bool>("Database:Enable"))
+                services.AddDatabase<ApplicationDbContext>(Configuration);
+
+            //AutoMapper
+            if (Configuration.GetValue<bool>("AutoMapper:Enable"))
+                services.AddAutoMapper(typeof(AutoMapperProfile));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -62,6 +70,9 @@ namespace Nekonya.WebApi
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            if (Configuration.GetValue<bool>("Cors:Enable"))
+                app.UseCors();
 
             //Oidc
             if (Configuration.GetValue<bool>("Oidc:Enable"))
